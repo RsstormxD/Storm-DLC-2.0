@@ -31,6 +31,9 @@ public class MusicIsland {
 	private static final float SETTINGS_HEIGHT = 108.0F;
     private static final float TAB_HEIGHT = 22.0F;
     private boolean profileSelected = true;
+    private final Anim reactionPresence = new Anim(260), reactionChange = new Anim(240);
+    private ClientFeedback.Notice displayedReaction, previousReaction;
+    private long feedbackEpoch = Long.MIN_VALUE;
     private boolean mediaAvailable;
     private String lastMediaKey = "";
     private Boolean lastPlaying;
@@ -79,11 +82,27 @@ public class MusicIsland {
         mediaAvailable = media != null;
         if (!rendering3D) updateMediaReaction(mc, session, media);
         ClientFeedback.Notice reaction = rendering3D ? null : ClientFeedback.reaction();
+        if (feedbackEpoch != ClientFeedback.epoch()) {
+            displayedReaction = previousReaction = null;
+            reactionPresence.snap(0);
+            reactionChange.snap(1);
+            feedbackEpoch = ClientFeedback.epoch();
+        }
+        if (reaction != displayedReaction) {
+            previousReaction = displayedReaction != null ? displayedReaction : previousReaction;
+            displayedReaction = reaction;
+            reactionChange.snap(0);
+        }
+        reactionPresence.update(reaction == null ? 0 : 1);
+        reactionChange.update(1);
+        float reactionAlpha = net.minecraft.util.Mth.clamp(reactionPresence.get(), 0, 1);
+        float reactionBlend = net.minecraft.util.Mth.clamp(reactionChange.get(), 0, 1);
+        ClientFeedback.Notice reactionContent = displayedReaction == null ? previousReaction : displayedReaction;
         extendAnim.update(expanded ? 1.0F : 0.0F);
-        float ext = rendering3D ? 1.0F : extendAnim.get();
-        float surfaceExt = reaction == null ? ext : 0.25F;
-        float desiredWidth = reaction == null ? targetWidth(session) : reactionWidth(reaction);
-        float desiredHeight = reaction == null ? targetHeight() : 42.0F;
+        float ext = rendering3D ? 1.0F : net.minecraft.util.Mth.clamp(extendAnim.get(), 0, 1);
+        float surfaceExt = net.minecraft.util.Mth.lerp(reactionAlpha, ext, .25F);
+        float desiredWidth = net.minecraft.util.Mth.lerp(reactionAlpha, targetWidth(session), reactionContent == null ? targetWidth(session) : reactionWidth(reactionContent));
+        float desiredHeight = net.minecraft.util.Mth.lerp(reactionAlpha, targetHeight(), 42);
         widthAnim.update(desiredWidth);
         heightAnim.update(desiredHeight);
         size.width = rendering3D ? panelWidth() : widthAnim.get();
@@ -92,16 +111,30 @@ public class MusicIsland {
         float radius = rendering3D ? 18 : Math.min(size.height / 2, 16 + 6 * surfaceExt);
         IslandRender.drawRoundedRect(x - 2, y + 2, size.width + 4, size.height + 2,
             radius + 2, radius + 2, radius + 2, radius + 2, 0x34000000);
-        int border = reaction == null ? 0x38FFFFFF : color(reaction.tone().color(), 100);
+        int border = reactionContent == null ? 0x38FFFFFF : blendColor(0x38FFFFFF, color(reactionContent.tone().color(), 100), reactionAlpha);
         IslandRender.drawRoundedRect(x - 0.6F, y - 0.6F, size.width + 1.2F, size.height + 1.2F,
             radius + 0.6F, radius + 0.6F, radius + 0.6F, radius + 0.6F, border);
         IslandRender.drawRoundedRect(x, y, size.width, size.height,
             radius, radius, radius, radius, 0xFA050507);
-        if (reaction == null && media != null) drawWaves(x, y, media, ext);
+        if (reactionAlpha < .998F && media != null) {
+            IslandRender.pushOpacity(1 - reactionAlpha);
+            try { drawWaves(x, y, media, ext); } finally { IslandRender.popOpacity(); }
+        }
         IslandRender.pushScissor(x, y, size.width, size.height);
         try {
-            if (reaction != null) drawReaction(x, y, reaction);
-            else {
+            if (reactionAlpha > .002F && reactionContent != null) {
+                if (displayedReaction != null && previousReaction != null && reactionBlend < .998F) {
+                    IslandRender.pushOpacity(reactionAlpha * (1 - reactionBlend));
+                    try { drawReaction(x, y - 4 * reactionBlend, previousReaction); }
+                    finally { IslandRender.popOpacity(); }
+                }
+                IslandRender.pushOpacity(reactionAlpha * (displayedReaction == null ? 1 : reactionBlend));
+                try { drawReaction(x, y + (displayedReaction == null ? 0 : 4 * (1 - reactionBlend)), reactionContent); }
+                finally { IslandRender.popOpacity(); }
+            }
+            if (reactionAlpha < .998F) {
+                IslandRender.pushOpacity(1 - reactionAlpha);
+                try {
                 if (!rendering3D && ext > 0.01F && profileEnabled()) drawTabs(x, y, ext);
                 float contentY = y + topInset() * ext;
                 boolean profile = !rendering3D && profileEnabled() && (profileSelected || media == null);
@@ -118,9 +151,10 @@ public class MusicIsland {
                     IslandRender.drawCenteredText(font, "Play music to see lyrics",
                         x + size.width / 2, y + (size.height - 7) / 2, 0x99FFFFFF);
                 }
+                } finally { IslandRender.popOpacity(); }
             }
         } finally { IslandRender.popScissor(); }
-        boolean musicSettings = reaction == null && (!profileEnabled() || !profileSelected) && media != null;
+        boolean musicSettings = reactionAlpha < .01F && (!profileEnabled() || !profileSelected) && media != null;
         settingsAnim.update(settingsOpen && ext > 0.5F && musicSettings ? 1.0F : 0.0F);
         if (settingsAnim.get() > 0.01F)
             drawSettings(x, settingsY(mc, y), 255 * ext, settingsAnim.get(), settingsAbove(mc, y));
@@ -157,9 +191,7 @@ public class MusicIsland {
     }
 
     private void drawReaction(float x, float y, ClientFeedback.Notice notice) {
-        float enter = Math.min(1, notice.age() / 180.0F);
-        float leave = Math.min(1, (notice.duration() - notice.age()) / 220.0F);
-        float alpha = 255 * Math.min(enter, leave);
+        float alpha = 255;
         float pulse = (float) (Math.sin(notice.age() * 0.014) * Math.exp(-notice.age() / 500.0) * 1.5);
         float circle = 10 + pulse;
         IslandRender.drawRoundedRect(x + 13 - pulse / 2, y + 16 - pulse / 2, circle, circle,
@@ -192,6 +224,9 @@ public class MusicIsland {
     }
 
     public void reset() {
+        displayedReaction = previousReaction = null;
+        reactionPresence.snap(0);
+        reactionChange.snap(1);
         expanded = settingsOpen = false;
         profileSelected = true;
         mediaAvailable = false;
@@ -208,14 +243,23 @@ public class MusicIsland {
 	private float islandX(Minecraft mc) {
         if(rendering3D) return 4.0F;
 		float sw = mc.getWindow().getGuiScaledWidth();
-		float center = IslandSettings.isMoved() ? IslandSettings.posX : sw / 2.0F;
+        boolean menu = mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen;
+        float center = !menu && IslandSettings.isMoved() ? IslandSettings.posX : sw / 2.0F;
         center = net.minecraft.util.Mth.clamp(center, size.width / 2 + 2, sw - size.width / 2 - 2);
 		return center - size.width / 2.0F;
 	}
 
+    private static int blendColor(int from, int to, float t) {
+        int result = 0;
+        for (int shift = 0; shift <= 24; shift += 8)
+            result |= Math.round(net.minecraft.util.Mth.lerp(t, from >>> shift & 255, to >>> shift & 255)) << shift;
+        return result;
+    }
+
 	private float islandY(Minecraft mc) {
         if(rendering3D) return 4.0F;
-		float base = IslandSettings.isMoved() ? IslandSettings.posY : 8.0F;
+        boolean menu = mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen;
+        float base = !menu && IslandSettings.isMoved() ? IslandSettings.posY : 8.0F;
 		float maxY = mc.getWindow().getGuiScaledHeight() - size.height - 2.0F;
 		return Math.max(2.0F, Math.min(base, maxY));
 	}

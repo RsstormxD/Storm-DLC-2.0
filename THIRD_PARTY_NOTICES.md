@@ -22,7 +22,12 @@ Storm DLC 2.0 combines the two archives supplied for this project.
   texture folder. Their original GIF files, transparency and frame timings are preserved.
 * Menu wallpaper: the user's Windows desktop image, originally named
   wallpaperflare.com_wallpaper.jpg. The supplied image is bundled unchanged as
-  the fallback background; the client can also read the current Windows wallpaper.
+  a retained legacy background; the client can also read the current Windows wallpaper.
+* Menu themes 1–3: the three JPEG images supplied by the user on 2026-10-06,
+  originally named 1234dsza.jpg and the two liquid-marbling-paint-texture-background
+  images (including the copy with the suffix (1)). Bundled unchanged as
+  assets/stormdlc/menu/theme-1.jpg, theme-2.jpg and theme-3.jpg.
+  These user-supplied images are not claimed as original Storm artwork.
 
 The user-supplied Xyeta combat, movement, math and aura sources were inspected as
 references for sensitivity quantization, aim height, movement and slot restoration.

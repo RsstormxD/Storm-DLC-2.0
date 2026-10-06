@@ -36,8 +36,10 @@ public abstract class TargetingModule extends Module {
     public final void setPriorityTarget(LivingEntity entity) { priority = entity == null ? null : entity.getUUID(); }
 
     protected final TargetSelector.Filters filters() {
-        return new TargetSelector.Filters(targetPlayers.get(), targetMobs.get(), targetAnimals.get(), searchRange.get(), fov.get());
+        return new TargetSelector.Filters(targetPlayers.get(), targetMobs.get(), targetAnimals.get(), searchRange.get(), fov.get(), requiresLineOfSight());
     }
+
+    protected boolean requiresLineOfSight() { return true; }
 
     @Override
     public void onEnable() {

@@ -1,6 +1,7 @@
 package dev.stormdlc.hud;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -33,6 +34,8 @@ public final class ClientFeedback {
 
     private static final List<Notice> notices = new ArrayList<>(4);
     private static Notice reaction;
+    private static final ArrayDeque<Notice> reactionQueue = new ArrayDeque<>(6);
+    private static long epoch;
     private static int suppressed;
     private static boolean stopping;
     private static UUID playerId;
@@ -46,6 +49,7 @@ public final class ClientFeedback {
     private ClientFeedback() {}
 
     public static long now() { return System.nanoTime() / 1_000_000L; }
+    public static long epoch() { return epoch; }
     public static Silence suppress() { return new Silence(); }
     public static void start() { stopping = false; clear(); }
     public static void stop() { stopping = true; clear(); }
@@ -66,7 +70,7 @@ public final class ClientFeedback {
             if (notices.size() == 4) notices.remove(0);
             notices.add(notice);
         }
-        if (settings.islandReactions.get()) reaction = notice;
+        if (settings.islandReactions.get()) enqueueReaction(notice);
     }
 
     public static void react(String key, String title, String message, Tone tone, long duration, int priority) {
@@ -75,8 +79,19 @@ public final class ClientFeedback {
         InterfaceModule settings = settings();
         if (stopping || suppressed > 0 || settings == null || !settings.islandReactions.get()
             || client.player == null || client.level == null) return;
-        if (reaction != null && !reaction.expired() && reaction.priority() > priority && reaction.age() < 1200L) return;
-        reaction = new Notice(key, title, message, tone, now(), Math.max(800L, Math.min(8000L, duration)), priority);
+        enqueueReaction(new Notice(key, title, message, tone, now(), Math.max(800L, Math.min(8000L, duration)), priority));
+    }
+
+    private static void enqueueReaction(Notice notice) {
+        if (reaction == null || reaction.expired() || notice.priority() > reaction.priority()) {
+            reaction = notice;
+            reactionQueue.removeIf(item -> item.key().equals(notice.key()));
+            return;
+        }
+        if (reaction.key().equals(notice.key())) { reaction = notice; return; }
+        reactionQueue.removeIf(item -> item.key().equals(notice.key()));
+        if (reactionQueue.size() >= 6) reactionQueue.removeFirst();
+        reactionQueue.addLast(notice);
     }
 
     public static List<Notice> notices() {
@@ -86,9 +101,15 @@ public final class ClientFeedback {
 
     public static Notice reaction() {
         InterfaceModule settings = settings();
-        if (settings == null || !settings.islandReactions.get() || reaction == null || reaction.expired()) {
+        if (settings == null || !settings.islandReactions.get()) {
             reaction = null;
+            reactionQueue.clear();
             return null;
+        }
+        reactionQueue.removeIf(item -> item.age() > 10000);
+        if (reaction == null || reaction.expired() || !reactionQueue.isEmpty() && reaction.age() >= 1400) {
+            Notice next = reactionQueue.pollFirst();
+            reaction = next == null ? null : new Notice(next.key(), next.title(), next.message(), next.tone(), now(), next.duration(), next.priority());
         }
         return reaction;
     }
@@ -98,7 +119,7 @@ public final class ClientFeedback {
 
     public static void tick(Minecraft client) {
         if (stopping) return;
-        if (client.player == null || client.level == null) { clear(); return; }
+        if (client.player == null || client.level == null) { if (level != null || playerId != null) clear(); return; }
         if (level != client.level || !client.player.getUUID().equals(playerId)) {
             clear();
             level = client.level;
@@ -109,7 +130,7 @@ public final class ClientFeedback {
             return;
         }
         notices.removeIf(Notice::expired);
-        if (reaction != null && reaction.expired()) reaction = null;
+        reaction();
         float health = client.player.getHealth() + client.player.getAbsorptionAmount();
         boolean critical = client.player.isAlive() && client.player.getHealth() <= 6.0F;
         if (critical && !lowHealth) react("health:low", "Low health", "Find cover and heal", Tone.WARNING, 3200L, 110);
@@ -128,6 +149,8 @@ public final class ClientFeedback {
     public static void clear() {
         notices.clear();
         reaction = null;
+        reactionQueue.clear();
+        epoch++;
         playerId = null;
         level = null;
         sessionStarted = 0;

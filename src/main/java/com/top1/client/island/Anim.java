@@ -1,47 +1,38 @@
 package com.top1.client.island;
 
-
 public class Anim {
-	private float value;
-	private float previous;
-	private float from;
-	private float target;
-	private long start;
-	private long duration;
+    private double value, velocity;
+    private float previous, target;
+    private long duration, updated = System.nanoTime();
 
-	public Anim(long duration) {
-		this.duration = duration;
-		this.start = System.currentTimeMillis() - duration;
-	}
+    public Anim(long duration) { this.duration = Math.max(1, duration); }
 
-	public void update(float target) {
-		if(target != this.target){
-			this.from = this.value;
-			this.target = target;
-			this.start = System.currentTimeMillis();
-		}
-		float t = Math.min(1.0F, (System.currentTimeMillis() - this.start) / (float) this.duration);
-		t = 1.0F - (1.0F - t) * (1.0F - t) * (1.0F - t);
-		this.previous = this.value;
-		this.value = this.from + (this.target - this.from) * t;
-	}
+    public void update(float target) {
+        if (!Float.isFinite(target)) return;
+        long now = System.nanoTime();
+        double dt = Math.max(0, Math.min(.1, (now - updated) / 1_000_000_000.0));
+        updated = now;
+        previous = (float) value;
+        this.target = target;
+        double omega = 6.0 / (duration / 1000.0);
+        double offset = value - target;
+        double term = velocity + omega * offset;
+        double decay = Math.exp(-omega * dt);
+        value = target + (offset + term * dt) * decay;
+        velocity = (velocity - omega * term * dt) * decay;
+        if (Math.abs(value - target) < .0001 && Math.abs(velocity) < .001) {
+            value = target;
+            velocity = 0;
+        }
+    }
 
-	public float get() {
-		return this.value;
-	}
-
-	public void setDuration(long duration) {
-		this.duration = duration;
-	}
-
-	public float delta() {
-		return this.value - this.previous;
-	}
-
-	public void snap(float value) {
-		this.value = value;
-		this.from = value;
-		this.target = value;
-		this.start = System.currentTimeMillis() - this.duration;
-	}
+    public float get() { return (float) value; }
+    public void setDuration(long duration) { this.duration = Math.max(1, duration); }
+    public float delta() { return (float) value - previous; }
+    public void snap(float value) {
+        if (!Float.isFinite(value)) return;
+        this.value = this.target = this.previous = value;
+        velocity = 0;
+        updated = System.nanoTime();
+    }
 }

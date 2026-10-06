@@ -8,7 +8,7 @@ Połączenie Astolfo Visuals 2.0 i Song Island 1.0.1, z portem Song Island z 1.2
 ## Instalacja
 
 Minecraft Java 1.21.4, Java 21, Fabric Loader 0.16.10 lub nowszy oraz Fabric API
-0.119.4+1.21.4. Plik storm-dlc-2.0.0+1.21.4.jar umieść w folderze mods.
+0.119.4+1.21.4. Plik storm-dlc-2.0.1+1.21.4.jar umieść w folderze mods.
 Usuń poprzednie osobne mody Astolfo Visuals i Song Island z tego profilu.
 Usuń też poprzedni JAR klienta, zanim dodasz nowe wydanie Storm DLC 2.0.
 Obsługa Spotify/sesji multimedialnych wymaga Windows x64. Biblioteka DLL znajduje
@@ -31,19 +31,30 @@ się wewnątrz moda i jest ładowana automatycznie; nie kopiuj jej do folderu sy
   sterowanie muzyką i reakcje na moduły, utwory, obrażenia oraz lot.
   Panel rozwiń kliknięciem po otwarciu czatu i wybierz Profile lub Music.
   Starsze konfiguracje Song Island są nadal obsługiwane.
+  Opcja Interface → Island Discord Profile używa nicku i avatara z profilu Discord
+  w GUI. Bez połączenia dostępny jest profil Minecraft. Powiadomienia i wyspa
+  mają płynne animacje rozmiaru, położenia oraz zmiany treści i kolejkę reakcji.
 * Interface → Notifications: angielskie powiadomienia o włączeniu i wyłączeniu
   modułów. Island Profile, Island Lyrics i Island Reactions sterują zawartością wyspy.
 * Cursor: animowana kaczka lub nietoperz pod kursorem na ekranach menu,
   ClickGUI, czatu i ekwipunku. Wybierz Style: Duck/Bat; rozmiar, przesunięcie,
   tempo animacji, Smooth Follow i Click Pulse mają osobne ustawienia.
-* Main Menu: napis StormDLC, zegar i aktualna tapeta Windows. Przycisk Wallpaper
-  w menu głównym pozwala wybrać własny PNG/JPG, dołączoną tapetę, zegar i przyciemnienie.
+* Ładowanie: czarne tło, animowany napis StormDLC, postęp i animacja kropek.
+  Działa podczas uruchamiania i przeładowywania zasobów.
+* Main Menu: centralny zegar, Dynamic Island i własne przyciski Liquid Glass
+  z rozmyciem, refrakcją, refleksami i animacją najechania/naciśnięcia.
+  Theme 1 / 2 / 3 wybierają trzy dołączone tapety w kolejności przesłanej przez użytkownika.
+  Appearance pozwala wybrać własny PNG/JPG, tapetę Windows, zegar i przyciemnienie.
   Dynamic Island jest widoczna także w menu; opcja Show in menus steruje tym widokiem.
 * Combat: KillAura, AutoTrap i AutoWeb ze wspólnymi filtrami i sortowaniem celów.
   Domyślnie wybierają graczy; moby i zwierzęta włączasz osobno. KillAura ma
   domyślny zasięg ataku 3,6 bloku, ciche rotacje z GCD i wygładzaniem modelu,
   opcjonalną predykcję elytry oraz Target Strafe. Tryby rotacji: MineStar V1,
   MineStar V2, Polar, AC V2 i HVH; Rotation speed i Stable Target regulują zachowanie.
+  Movement → Follow Target podąża za celem z predykcją, planowaniem ścieżki po
+  blokach, omijaniem przeszkód, skokami i hamowaniem przed dystansem ataku.
+  Target Strafe okrąża cel, Off wyłącza sterowanie ruchem. Manual Movement Override
+  oddaje sterowanie po wciśnięciu klawiszy ruchu; lista Friends obejmuje też podążanie.
 * Friends → Friends → Manage Friends: edytor nicków i UUID. Lista jest zapisywana
   automatycznie i wyklucza przyjaciół z działań Combat. Dostępne są także komendy
   `$friend add <nick/UUID>`, `$friend remove <nick/UUID>`, `$friend list` i `$friend clear`.
@@ -74,7 +85,7 @@ brak połączenia z GitHubem nie blokuje gry. Instalację nowego JAR-a wykonujes
 Java 21, oficjalne mapowania Mojang (Mojmap), Loom 1.13.6 i Gradle 8.14.
 Windows: `gradlew.bat assemble -x test -x compileTestJava -x processTestResources`.
 Linux: `./gradlew assemble -x test -x compileTestJava -x processTestResources`.
-Wynik: `build/libs/storm-dlc-2.0.0+1.21.4.jar`.
+Wynik: `build/libs/storm-dlc-2.0.1+1.21.4.jar`.
 Repozytorium aktualizacji określa `updates_repository` w `gradle.properties`;
 można je też przekazać jako `-Pupdates_repository=konto/repo`.
 Pusta wartość wyłącza sprawdzanie aktualizacji.
@@ -91,3 +102,4 @@ Powiadomienie pojawia się dopiero, gdy wydanie ma gotowy plik
 LICENSE-Song-Island. Nie dołączono plików gry Minecraft.
 Architektura i ustawienia modułów: [STORM-DLC-MODULES-2.0-PL.md](STORM-DLC-MODULES-2.0-PL.md).
 Dynamic Island, Cursor i powiadomienia: [STORM-DLC-ISLAND-2.0-PL.md](STORM-DLC-ISLAND-2.0-PL.md).
+Menu, motywy i Follow Target: [STORM-DLC-UI-2.0-PL.md](STORM-DLC-UI-2.0-PL.md).

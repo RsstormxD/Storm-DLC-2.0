@@ -1,6 +1,7 @@
 # Storm DLC 2.0 — Fabric / Minecraft 1.21.4
 
-Wersja moda: 2.0.0. Plik: `build/libs/storm-dlc-2.0.0+1.21.4.jar`.
+Wersja moda: 2.0.1. Nazwa pozostaje Storm DLC 2.0.
+Plik: `build/libs/storm-dlc-2.0.1+1.21.4.jar`.
 
 Nazwa Storm DLC 2.0 jest używana w GUI, HUD, tytule okna, Discord RPC,
 metadanych, dokumentacji i projekcie Gradle. Przestrzeń nazw zasobów i pakietów
@@ -33,3 +34,5 @@ na gałęzi `main` lub wysłanie tagu, np. `v2.0.2+1.21.4`.
 Workflow `.github/workflows/release.yml` skompiluje i opublikuje JAR-y.
 
 System Combat i Friends opisuje [STORM-DLC-MODULES-2.0-PL.md](STORM-DLC-MODULES-2.0-PL.md).
+Animowane ładowanie, trzy motywy menu, profil Discord i ruch KillAura:
+[STORM-DLC-UI-2.0-PL.md](STORM-DLC-UI-2.0-PL.md).

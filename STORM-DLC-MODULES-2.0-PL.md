@@ -1,7 +1,7 @@
 # Storm DLC 2.0 — Combat i Friends, Fabric 1.21.4 / Mojmap
 
 Projekt używa Java 21 i oficjalnych mapowań Mojang. Nazwa pozostaje Storm DLC 2.0,
-wersja metadanych bieżącego JAR-a to `2.0.0+1.21.4`.
+wersja metadanych bieżącego JAR-a to `2.0.1+1.21.4`.
 
 ## Obsługa
 
@@ -32,7 +32,10 @@ oraz UUID z listy. Komendy: `$friend add <nick/UUID>`, `$friend remove <nick/UUI
 | Visual Rotations | true | Wizualne obroty modelu bez zmiany yaw/pitch lokalnej kamery |
 | Elytra Predict / Prediction Ticks | false / 1,5 | Ekstrapolacja dla lotu celu albo lokalnego gracza; zakres 0–5 ticków |
 | True Position ESP | false | Zielony obrys przewidywanego AABB |
-| Auto Sprint / Target Strafe / Criticals Sync | false | Opcjonalne sterowanie sprintem, orbitą i oczekiwanie na fazę opadania |
+| Movement | Follow Target | Follow Target, Target Strafe lub Off; sterowanie kierunkiem niezależne od kamery |
+| Follow Distance / Movement Prediction | 2,3 / 1,5 | Dystans zatrzymania i krótkie wyprzedzenie ruchu celu |
+| Follow Auto Jump / Manual Movement Override | true / true | Skoki na pojedyncze bloki i ręczne przejęcie sterowania klawiszami |
+| Auto Sprint / Criticals Sync | false / false | Opcjonalne sterowanie sprintem i oczekiwanie na fazę opadania |
 | Strafe Distance / Smart Criticals / No Eat Attack | 2,8 / true / true | Odległość orbity, krytyki przy skoku i pomijanie ataków podczas używania przedmiotów |
 | Elytra Boost / Min Speed | false / 0,85 | Opcjonalne użycie fajerwerku z przywróceniem slotu |
 | Place Range / Place Delay / Blocks Per Tick | 4,5 / 2 / 1 | AutoTrap/AutoWeb; zasięg ogranicza też atrybut interakcji gracza |
@@ -73,7 +76,8 @@ stan kucania i odpowiednie pakiety są również przywracane w `finally`.
 | `SilentRotations` / `VisualRotations` / `VisualRotationMixin` | Niezależne kąty ataku i bezpieczne rotacje modelu |
 | `RotationMath` / `RotationPackets` | Kwantyzacja myszy, wygładzanie i przywracanie kierunku w pakietach |
 | `TrajectoryPredictor` / `TargetBoxRenderer` | Predykcja 3D i obrysy AABB |
-| `MovementControl` / `HotbarSlots` | Własność wymuszonych klawiszy i przywracanie slotu |
+| `MovementControl` / `GroundPathPlanner` | Predykcja podążania, ograniczone A*, kontrola kolizji i własność wymuszonych klawiszy |
+| `HotbarSlots` | Przywracanie slotu i synchronizacja interakcji |
 | `BlockGrid` / `BlockPlacementService` / `BlockPlacementModule` | Siatka pozycji, walidacja i ograniczanie interakcji |
 | `KillAuraModule` / `AutoTrapModule` / `AutoWebModule` | Konkretny cykl działania modułów Combat |
 
@@ -86,9 +90,14 @@ warunku ograniczającego Combat do singleplayera.
 Konfiguracja zapisuje również zagnieżdżone ustawienia. Przy ładowaniu najpierw
 wyłącza moduł, ustawia wartości i dopiero potem przywraca stan włączenia.
 Starsze `MineStar V3` przechodzi na `MINESTAR_V2`, a `Elytra Mode` na `Elytra Boost`.
-Starsze `Target Lock` jest odczytywane jako `Target Strafe`.
+Włączone starsze `Target Lock` lub `Target Strafe` wybiera `Movement: Target Strafe`.
+Nowa instalacja domyślnie wybiera `Movement: Follow Target`. Lista Friends,
+filtry celów i czyszczenie stanu obowiązują również podczas podążania.
+Ruch korzysta z normalnych klawiszy, uwzględnia kierunek kamery, widoczność celu,
+kolizje, podłoże, niebezpieczne bloki i trasę w załadowanych chunkach.
+Opis menu i ruchu: [STORM-DLC-UI-2.0-PL.md](STORM-DLC-UI-2.0-PL.md).
 Powiadomienia, wyspa i Cursor: [STORM-DLC-ISLAND-2.0-PL.md](STORM-DLC-ISLAND-2.0-PL.md).
 
 Budowanie bez testów:
 `gradlew.bat assemble -x test -x compileTestJava -x processTestResources`.
-JAR: `build/libs/storm-dlc-2.0.0+1.21.4.jar`.
+JAR: `build/libs/storm-dlc-2.0.1+1.21.4.jar`.

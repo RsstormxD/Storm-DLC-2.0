@@ -10,53 +10,59 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.modules.render.MainMenuModule;
 
 public final class MenuAppearanceScreen extends Screen {
     private final Screen parent;
     private EditBox imagePath;
+    private Button source;
     private String message = "";
     private boolean error;
-    private int startY;
+    private int startY, panelWidth;
 
     public MenuAppearanceScreen(Screen parent) {
-        super(Component.literal("StormDLC menu"));
+        super(Component.literal("Menu appearance"));
         this.parent = parent;
     }
 
     @Override protected void init() {
         MainMenuModule settings = MainMenuModule.INSTANCE;
-        int x = width / 2 - 158;
-        startY = Math.max(72, height / 2 - 74);
-        addRenderableWidget(Button.builder(Component.literal("Background: " + settings.wallpaper.get()), button -> {
+        panelWidth = Math.min(316, width - 32);
+        int x = (width - panelWidth) / 2, gap = 5, third = (panelWidth - gap * 2) / 3;
+        startY = Math.max(64, (height - 175) / 2);
+        for (int index = 0; index < 3; index++) {
+            final int theme = index;
+            var button = addRenderableWidget(Button.builder(Component.literal("Theme " + (index + 1)), pressed -> {
+                settings.wallpaper.setValue(MainMenuModule.Wallpaper.values()[theme]);
+                MenuWallpaper.refresh();
+            }).bounds(x + index * (third + gap), startY, third, 23).build());
+            GlassButtonRenderer.theme(button, index + 1);
+        }
+        int half = (panelWidth - gap) / 2;
+        source = addRenderableWidget(Button.builder(Component.literal("Wallpaper: " + settings.wallpaper.get()), button -> {
             settings.wallpaper.cycle();
-            button.setMessage(Component.literal("Background: " + settings.wallpaper.get()));
+            button.setMessage(Component.literal("Wallpaper: " + settings.wallpaper.get()));
             MenuWallpaper.refresh();
-        }).bounds(x, startY, 220, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Menu: " + (settings.isEnabled() ? "On" : "Off")), button -> {
-            settings.toggle();
-            button.setMessage(Component.literal("Menu: " + (settings.isEnabled() ? "On" : "Off")));
-        }).bounds(x + 224, startY, 92, 20).build());
+        }).bounds(x, startY + 28, panelWidth, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Clock: " + (settings.clock.get() ? "On" : "Off")), button -> {
             settings.clock.toggle();
             button.setMessage(Component.literal("Clock: " + (settings.clock.get() ? "On" : "Off")));
-        }).bounds(x, startY + 24, 156, 20).build());
+        }).bounds(x, startY + 53, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Reload wallpaper"), button -> {
             MenuWallpaper.refresh();
             error = false;
             message = "";
-        }).bounds(x + 160, startY + 24, 156, 20).build());
-        addRenderableWidget(new AbstractSliderButton(x, startY + 48, 316, 20, Component.empty(), settings.dimming.get() / 80.0) {
+        }).bounds(x + half + gap, startY + 53, half, 20).build());
+        addRenderableWidget(new AbstractSliderButton(x, startY + 78, panelWidth, 18, Component.empty(), settings.dimming.get() / 80.0) {
             { updateMessage(); }
             @Override protected void updateMessage() {
-                setMessage(Component.literal("Background dimming: " + Math.round(value * 80) + "%"));
+                setMessage(Component.literal("Dimming: " + Math.round(value * 80) + "%"));
             }
             @Override protected void applyValue() { settings.dimming.set(Math.round(value * 80)); }
         });
-        imagePath = new EditBox(font, x, startY + 88, 220, 20, Component.literal("Path to wallpaper"));
+        imagePath = new EditBox(font, x, startY + 112, panelWidth - 85, 19, Component.literal("Path to wallpaper"));
         imagePath.setMaxLength(32768);
-        imagePath.setHint(Component.literal("Paste a PNG / JPG path"));
+        imagePath.setHint(Component.literal("PNG / JPG path"));
         imagePath.setValue(MenuWallpaper.customPath());
         addRenderableWidget(imagePath);
         addRenderableWidget(Button.builder(Component.literal("Use image"), button -> {
@@ -69,29 +75,28 @@ public final class MenuAppearanceScreen extends Screen {
                 error = true;
                 message = failure.getMessage();
             }
-        }).bounds(x + 224, startY + 88, 92, 20).build());
+        }).bounds(x + panelWidth - 80, startY + 112, 80, 19).build());
         addRenderableWidget(Button.builder(Component.literal("Back"), button -> onClose())
-            .bounds(x, startY + 137, 316, 20).build());
+            .bounds(x, startY + 154, panelWidth, 21).build());
     }
 
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        source.setMessage(Component.literal("Wallpaper: " + MainMenuModule.INSTANCE.wallpaper.get()));
         MainMenuRenderer.background(graphics, width, height, false);
         SongIslandClient.fonts();
-        IslandRender.drawRoundedRect(width / 2.0F - 173, startY - 38, 346, 207,
-            20, 20, 20, 20, 0xea08080d);
-        IslandRender.drawCenteredText(Fonts.medium(17), "Your StormDLC menu", width / 2.0F, startY - 26, 0xfff5f5fa);
-        IslandRender.drawText(Fonts.regular(6), "Custom wallpaper: paste the full image path below",
-            width / 2.0F - 157, startY + 76, 0xffb1b1bf);
+        float x = (width - panelWidth) / 2.0F;
+        IslandRender.drawGlass(x - 12, startY - 30, panelWidth + 24, 207, 17, 0, 0, .5F, .5F, 0xffeeeeff);
+        IslandRender.drawCenteredText(Fonts.medium(14), "Menu appearance", width / 2.0F, startY - 22, 0xfff5f5fa);
+        IslandRender.drawText(Fonts.regular(6), "Your own wallpaper", x + 2, startY + 102, 0xffc5c5d0);
         String status = message.isEmpty() ? MenuWallpaper.status() : message;
-        IslandRender.drawWindowedText(Fonts.regular(6), status, width / 2.0F - 157, startY + 118,
-            error ? 0xffff8794 : 0xff9fcab7, width / 2.0F - 158, width / 2.0F + 158, 5, 0);
+        IslandRender.drawWindowedText(Fonts.regular(6), status, x + 2, startY + 141,
+            error ? 0xffff8794 : 0xff9fcab7, x, x + panelWidth, 5, 0);
         IslandRender.flush();
         super.render(graphics, mouseX, mouseY, delta);
     }
 
     @Override public void onClose() {
-        if (AstolfoclientClient.configManager != null)
-            AstolfoclientClient.configManager.saveConfig(AstolfoclientClient.configManager.getActiveProfile());
+        MainMenuRenderer.save();
         minecraft.setScreen(parent);
     }
 }

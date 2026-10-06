@@ -2,6 +2,7 @@ package xyz.angames.astolfoclient.client.module.modules;
 
 import dev.stormdlc.combat.HotbarSlots;
 import dev.stormdlc.combat.MovementControl;
+import dev.stormdlc.combat.MovementMode;
 import dev.stormdlc.combat.RotationMode;
 import dev.stormdlc.combat.RotationMath;
 import dev.stormdlc.combat.RotationPackets;
@@ -32,7 +33,11 @@ public final class KillAuraModule extends TargetingModule {
     public final NumberSetting predictionTicks = new NumberSetting("Prediction Ticks", 1.5, 0.0, 5.0, 0.1);
     public final BooleanSetting truePositionEsp = new BooleanSetting("True Position ESP", false);
     public final BooleanSetting autoSprint = new BooleanSetting("Auto Sprint", false);
-    public final BooleanSetting targetLock = new BooleanSetting("Target Strafe", false);
+    public final EnumSetting<MovementMode> movementMode = new EnumSetting<>("Movement", MovementMode.FOLLOW);
+    public final NumberSetting followDistance = new NumberSetting("Follow Distance", 2.3, 0.8, 5.0, 0.1);
+    public final NumberSetting movementPrediction = new NumberSetting("Movement Prediction", 1.5, 0.0, 4.0, 0.1);
+    public final BooleanSetting autoJump = new BooleanSetting("Follow Auto Jump", true);
+    public final BooleanSetting manualMovement = new BooleanSetting("Manual Movement Override", true);
     public final NumberSetting strafeDistance = new NumberSetting("Strafe Distance", 2.8, 1.0, 5.0, 0.1);
     public final BooleanSetting noEatAttack = new BooleanSetting("No Eat Attack", true);
     public final BooleanSetting criticalsSync = new BooleanSetting("Criticals Sync", false);
@@ -49,13 +54,18 @@ public final class KillAuraModule extends TargetingModule {
     public KillAuraModule() {
         super("KillAura", "Silent combat rotations, shared target filters and trajectory prediction");
         addSettings(reach, rotationMode, rotationSpeed, visualRotations, elytraPredict, predictionTicks,
-            truePositionEsp, autoSprint, targetLock, strafeDistance, noEatAttack, criticalsSync, smartCriticals,
+            truePositionEsp, autoSprint, movementMode, followDistance, movementPrediction, autoJump, manualMovement,
+            strafeDistance, noEatAttack, criticalsSync, smartCriticals,
             elytraMode, minSpeed, boostDelay);
         rotationSpeed.setVisibility(() -> rotationMode.getValue() != RotationMode.HVH);
         predictionTicks.setVisibility(elytraPredict::get);
         minSpeed.setVisibility(elytraMode::get);
         boostDelay.setVisibility(elytraMode::get);
-        strafeDistance.setVisibility(targetLock::get);
+        strafeDistance.setVisibility(() -> movementMode.getValue() == MovementMode.ORBIT);
+        followDistance.setVisibility(() -> movementMode.getValue() == MovementMode.FOLLOW);
+        movementPrediction.setVisibility(() -> movementMode.getValue() == MovementMode.FOLLOW);
+        autoJump.setVisibility(() -> movementMode.getValue() == MovementMode.FOLLOW);
+        manualMovement.setVisibility(() -> movementMode.getValue() != MovementMode.OFF);
         smartCriticals.setVisibility(criticalsSync::get);
     }
 
@@ -91,10 +101,15 @@ public final class KillAuraModule extends TargetingModule {
     }
 
     @Override
+    protected boolean requiresLineOfSight() { return movementMode.getValue() != MovementMode.FOLLOW; }
+
+    @Override
     public void onTick() {
         Minecraft client = Minecraft.getInstance();
         if (!selectTarget(client)) return;
         prediction = predictor.predict(client, currentTarget, elytraPredict.get(), predictionTicks.get());
+        movement.update(client, currentTarget, new MovementControl.Options(movementMode.getValue(), autoSprint.get(),
+            followDistance.get(), strafeDistance.get(), reach.get(), movementPrediction.get(), autoJump.get(), manualMovement.get()));
         var aimBox = prediction.box();
         var aimPoint = prediction.aimPoint();
         var actualBox = currentTarget.getBoundingBox();
@@ -105,13 +120,11 @@ public final class KillAuraModule extends TargetingModule {
         SilentRotations.Angles angles = rotations.update(client, aimBox, aimPoint,
             rotationMode.getValue(), rotationSpeed.get());
         if (angles == null) {
-            movement.clear();
             VisualRotations.clear(this);
             return;
         }
         if (visualRotations.get()) VisualRotations.update(this, client.player.getUUID(), angles);
         else VisualRotations.clear(this);
-        movement.update(client, currentTarget, targetLock.get(), autoSprint.get(), strafeDistance.get());
         boostElytra(client);
         attack(client);
     }

@@ -11,6 +11,7 @@ public final class IslandRender {
     private static final List<Cmd> QUEUE=new ArrayList<>();
     private static final List<float[]> SCISSORS=new ArrayList<>();
     private static boolean needsSnapshot;
+    private static final Deque<Float> OPACITY = new ArrayDeque<>();
     private record Cmd(String pipeline,int texture,float[] verts,int[] colors,float[] params,float[] scissor) {}
     public static ResourceLocation id(String path){return ResourceLocation.fromNamespaceAndPath("song-island",path);}
     public static void submitWorld(AbstractTexture texture,float[] verts,int[] colors,Matrix4f model,Matrix4f projection){
@@ -31,8 +32,34 @@ public final class IslandRender {
 
 	private static void submit(String pipeline, int tex,
 		float[] verts, int[] colors, float[] params) {
+		if (!OPACITY.isEmpty()) {
+			float opacity = OPACITY.peek();
+			colors = colors.clone();
+			for (int i = 0; i < colors.length; i++)
+				colors[i] = (Math.round((colors[i] >>> 24) * opacity) << 24) | (colors[i] & 0xffffff);
+		}
 		QUEUE.add(new Cmd(pipeline, tex, verts, colors, params, scissor()));
 	}
+
+    public static void pushOpacity(float opacity) {
+        OPACITY.push(Math.max(0, Math.min(1, opacity)) * (OPACITY.isEmpty() ? 1 : OPACITY.peek()));
+    }
+
+    public static void popOpacity() { if (!OPACITY.isEmpty()) OPACITY.pop(); }
+
+    public static void drawGlass(float x, float y, float width, float height, float radius,
+        float hover, float press, float pointerX, float pointerY, int color) {
+        if (LegacyRenderer.worldModel() != null) return;
+        needsSnapshot = true;
+        var window = Minecraft.getInstance().getWindow();
+        float sw = window.getGuiScaledWidth(), sh = window.getGuiScaledHeight();
+        float u = x / sw, v = (sh - y - height) / sh, tw = width / sw, th = height / sh;
+        float[] vertices = {x, y, 0, u, v + th, x, y + height, 0, u, v,
+            x + width, y + height, 0, u + tw, v, x + width, y, 0, u + tw, v + th};
+        submit("glass", 0, vertices, fill(color, 4),
+            params(width, height, .75F, 1, radius, radius, radius, radius,
+                hover, press, pointerX, pointerY));
+    }
 
 	private static int[] fill(int color, int vertices) {
 		int[] colors = new int[vertices];
@@ -197,7 +224,8 @@ public final class IslandRender {
             for(Cmd cmd:QUEUE){
                 var uniforms=new HashMap<String,float[]>(Map.of("SizeSmooth",Arrays.copyOfRange(cmd.params,0,4),"Radius",Arrays.copyOfRange(cmd.params,4,8),"Extra",Arrays.copyOfRange(cmd.params,8,12)));
                 uniforms.put("LocalClip",cmd.scissor==null?new float[]{-100000,-100000,200000,200000}:cmd.scissor);
-                LegacyRenderer.draw("song-island:core/island_"+cmd.pipeline,cmd.pipeline.equals("blur")?snapshot:cmd.texture,cmd.verts,cmd.colors,model,projection,uniforms,world?null:cmd.scissor,world);
+                boolean background = cmd.pipeline.equals("blur") || cmd.pipeline.equals("glass");
+                LegacyRenderer.draw("song-island:core/island_"+cmd.pipeline,background?snapshot:cmd.texture,cmd.verts,cmd.colors,model,projection,uniforms,world?null:cmd.scissor,world);
             }
         }finally{QUEUE.clear();SCISSORS.clear();needsSnapshot=false;}
     }

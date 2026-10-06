@@ -20,6 +20,7 @@ public class InterfaceModule extends Module {
    public final BooleanSetting notifications = new BooleanSetting("Notifications", true);
    public final NumberSetting notificationDuration = new NumberSetting("Notification Duration", 3.0, 1.0, 8.0, 0.5);
    public final BooleanSetting islandProfile = new BooleanSetting("Island Profile", true);
+   public final BooleanSetting islandDiscord = new BooleanSetting("Island Discord Profile", true);
    public final BooleanSetting islandLyrics = new BooleanSetting("Island Lyrics", true);
    public final BooleanSetting islandReactions = new BooleanSetting("Island Reactions", true);
 
@@ -34,7 +35,8 @@ public class InterfaceModule extends Module {
       this.addSetting(this.infoHud);
       this.addSetting(this.logo);
       this.addSetting(this.activeBinds);
-      addSettings(notifications, notificationDuration, islandProfile, islandLyrics, islandReactions);
+      addSettings(notifications, notificationDuration, islandProfile, islandDiscord, islandLyrics, islandReactions);
+      islandDiscord.setVisibility(islandProfile::get);
       notificationDuration.setVisibility(notifications::get);
       setEnabled(true);
    }

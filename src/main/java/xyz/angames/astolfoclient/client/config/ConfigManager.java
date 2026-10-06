@@ -393,6 +393,13 @@ public class ConfigManager {
          module.setKeyCode(data.keyCode);
          if (data.settings != null) for (Setting setting : collectModuleSettings(module)) {
             String key = setting.getName();
+            if (module instanceof xyz.angames.astolfoclient.client.module.modules.KillAuraModule
+                && key.equals("Movement") && !data.settings.containsKey(key)) {
+               Object oldStrafe = data.settings.getOrDefault("Target Strafe", data.settings.get("Target Lock"));
+               if (Boolean.parseBoolean(String.valueOf(oldStrafe)) && setting instanceof EnumSetting<?> enumSetting)
+                  enumSetting.setByName("ORBIT");
+               continue;
+            }
             if (key.equals("Spinning logo") && !data.settings.containsKey(key)) key = "Spinning logo info";
             if (key.equals("Elytra Boost") && !data.settings.containsKey(key)) key = "Elytra Mode";
             if (key.equals("Target Strafe") && !data.settings.containsKey(key)) key = "Target Lock";

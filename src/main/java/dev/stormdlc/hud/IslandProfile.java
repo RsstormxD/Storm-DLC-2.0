@@ -13,6 +13,8 @@ import net.minecraft.util.Mth;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.ModuleManager;
+import xyz.angames.astolfoclient.client.DiscordRpcManager;
+import xyz.angames.astolfoclient.client.util.DiscordAvatarManager;
 
 public final class IslandProfile {
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
@@ -20,7 +22,30 @@ public final class IslandProfile {
     private IslandProfile() {}
 
     private static String name(Minecraft client) {
+        if (discord()) return DiscordAvatarManager.profile().username();
         return client.player == null ? client.getUser().getName() : client.player.getGameProfile().getName();
+    }
+
+    private static boolean discord() {
+        var settings = ClientFeedback.settings();
+        return (settings == null || settings.islandDiscord.get()) && DiscordAvatarManager.profile().available();
+    }
+
+    private static void avatar(Minecraft client, float x, float y, float size, float alpha) {
+        if (!discord()) { IslandRender.drawSkinHead(skin(client), x, y, size, alpha); return; }
+        var image = DiscordAvatarManager.getAvatarTexture();
+        if (image != null) IslandRender.drawRoundedTexture(image, x, y, size, size,
+            size / 2, size / 2, size / 2, size / 2, color(0xffffffff, alpha));
+        else {
+            IslandRender.drawRoundedRect(x, y, size, size, size / 2, size / 2, size / 2, size / 2, color(0xff5865f2, alpha));
+            IslandRender.drawCenteredText(Fonts.medium(size * .48F), name(client).substring(0, 1).toUpperCase(Locale.ROOT),
+                x + size / 2, y + size * .27F, color(0xffffffff, alpha));
+        }
+        float dot = size * .23F;
+        IslandRender.drawRoundedRect(x + size - dot - 1, y + size - dot - 1, dot + 2, dot + 2,
+            dot, dot, dot, dot, color(0xff050507, alpha));
+        IslandRender.drawRoundedRect(x + size - dot, y + size - dot, dot, dot,
+            dot / 2, dot / 2, dot / 2, dot / 2, color(DiscordRpcManager.discordConnected ? 0xff71e3ae : 0xff858590, alpha));
     }
 
     private static ResourceLocation skin(Minecraft client) {
@@ -29,10 +54,10 @@ public final class IslandProfile {
     }
 
     public static void drawPill(Minecraft client, float x, float y, float width, float alpha) {
-        IslandRender.drawSkinHead(skin(client), x + 9, y + 7, 18, alpha);
+        avatar(client, x + 9, y + 7, 18, alpha);
         IslandRender.drawWindowedText(Fonts.medium(8), name(client), x + 34, y + 8,
             color(0xfff5f5f7, alpha), x + 33, x + width - 46, 5, 0);
-        IslandRender.drawWindowedText(Fonts.regular(5.5F), "Storm DLC 2.0  ·  " + client.getFps() + " FPS",
+        IslandRender.drawWindowedText(Fonts.regular(5.5F), (discord() ? "Discord" : "Minecraft") + "  ·  " + client.getFps() + " FPS",
             x + 34, y + 21, color(0xff9999a4, alpha), x + 33, x + width - 43, 3, 0);
         IslandRender.drawText(Fonts.medium(7), LocalTime.now().format(CLOCK), x + width - 36, y + 9,
             color(0xffededf2, alpha));
@@ -45,10 +70,13 @@ public final class IslandProfile {
         Font title = Fonts.medium(10);
         Font text = Fonts.regular(7);
         Font small = Fonts.regular(6);
-        IslandRender.drawSkinHead(skin(client), x + 14, y + 6, 28, alpha);
+        avatar(client, x + 14, y + 6, 28, alpha);
         IslandRender.drawWindowedText(title, name(client), x + 51, y + 9,
             color(0xfff5f5f7, alpha), x + 50, x + width - 14, 5, 0);
-        IslandRender.drawText(text, "Storm DLC 2.0", x + 51, y + 25, color(0xffa9bad7, alpha));
+        String subtitle = discord() ? "Discord  ·  " + (DiscordRpcManager.discordConnected ? "Connected" : "Offline")
+            : "Minecraft  ·  " + (client.player == null ? "Ready to play" : "In game");
+        IslandRender.drawWindowedText(text, subtitle, x + 51, y + 25, color(0xffa9bad7, alpha),
+            x + 50, x + width - 14, 4, 0);
         float column = (width - 36) / 3;
         if (player != null) {
             var info = client.getConnection() == null ? null : client.getConnection().getPlayerInfo(player.getUUID());

@@ -22,6 +22,7 @@ import xyz.angames.astolfoclient.client.util.DiscordAvatarManager;
 public class DiscordRpcManager {
    public static final String CLIENT_ID="1552749614816305223";
    public static volatile String discordUsername="Discord offline";
+   public static volatile boolean discordConnected;
    private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger("StormDLC/Discord");
    private volatile boolean running,ready,dirty=true;
    private volatile int generation;
@@ -81,12 +82,12 @@ public class DiscordRpcManager {
                   JsonObject root=JsonParser.parseString(frame.json).getAsJsonObject();
                   String event=root.has("evt") && !root.get("evt").isJsonNull()?root.get("evt").getAsString():"";
                   if(event.equals("READY")){
-                     ready=true;dirty=true;useAsset=true;
+                     ready=true;discordConnected=true;dirty=true;useAsset=true;
                      JsonObject data=root.getAsJsonObject("data");
                      if(data!=null && data.has("user")){
                         JsonObject user=data.getAsJsonObject("user");String name=user.get("username").getAsString();String id=user.get("id").getAsString();String avatar=user.has("avatar") && !user.get("avatar").isJsonNull()?user.get("avatar").getAsString():"";
                         discordUsername=name;
-                        net.minecraft.client.Minecraft.getInstance().execute(()->{ClickGuiScreen.setDiscordUser(name,id,avatar);DiscordAvatarManager.update(name,id,avatar);});
+                        net.minecraft.client.Minecraft.getInstance().execute(()->ClickGuiScreen.setDiscordUser(name,id,avatar));
                      }
                      LOG.info("Discord IPC ready for application {}",CLIENT_ID);publish();
                   }else if(event.equals("ERROR")){
@@ -111,7 +112,7 @@ public class DiscordRpcManager {
       acknowledged=false;if(updater!=null)updater.shutdownNow();closeChannel();if(rpcThread!=null)rpcThread.interrupt();
    }
    private void closeChannel(){
-      ready=false;acknowledged=false;IPCChannel old=ipcChannel;ipcChannel=null;
+      ready=false;discordConnected=false;acknowledged=false;IPCChannel old=ipcChannel;ipcChannel=null;
       if(old!=null)try{old.close();}catch(IOException ignored){}
    }
    public void update(){dirty=true;}

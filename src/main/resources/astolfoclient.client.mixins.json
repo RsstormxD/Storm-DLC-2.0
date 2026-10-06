@@ -57,6 +57,8 @@
     "ScoreboardTeamMixin",
     "ScreenMixin",
     "TitleScreenMixin",
+    "MenuWidgetMixin",
+    "LoadingOverlayMixin",
     "ShaderProgramAccessor",
     "SoundSystemMixin",
     "TextDisplayEntityMixin",

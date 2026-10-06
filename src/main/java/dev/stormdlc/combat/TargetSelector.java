@@ -13,7 +13,11 @@ import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.util.FriendsManager;
 
 public final class TargetSelector {
-    public record Filters(boolean players, boolean mobs, boolean animals, double range, double fov) {}
+    public record Filters(boolean players, boolean mobs, boolean animals, double range, double fov, boolean visibleOnly) {
+        public Filters(boolean players, boolean mobs, boolean animals, double range, double fov) {
+            this(players, mobs, animals, range, fov, true);
+        }
+    }
     private TargetSelector() {}
 
     public static LivingEntity select(Minecraft client, Filters filters, SortMode mode, UUID priority) {
@@ -40,7 +44,7 @@ public final class TargetSelector {
         if (entity instanceof Player) allowed = filters.players();
         else if (entity instanceof Animal) allowed = filters.animals();
         else allowed = entity instanceof Mob && filters.mobs();
-        if (!allowed || entity.isInvisible() || !client.player.hasLineOfSight(entity)) return false;
+        if (!allowed || entity.isInvisible() || filters.visibleOnly() && !client.player.hasLineOfSight(entity)) return false;
         Vec3 eye = client.player.getEyePosition();
         if (distanceSquared(eye, entity.getBoundingBox()) > filters.range() * filters.range()) return false;
         Vec3 direction = entity.getBoundingBox().getCenter().subtract(eye);

@@ -5,6 +5,7 @@ import com.sun.jna.Native;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 import dev.stormdlc.config.ClientPaths;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,8 +39,12 @@ public final class MenuWallpaper {
 
     private static final Logger LOG = LoggerFactory.getLogger("StormDLC/Menu");
     private static final int MAX_BYTES = 32 * 1024 * 1024;
-    private static final ResourceLocation BUNDLED = ResourceLocation.fromNamespaceAndPath("stormdlc", "menu/wallpaper.jpg");
-    private static final Texture FALLBACK = new Texture(BUNDLED, 1920, 1154);
+    private static final ResourceLocation[] THEMES = {
+        ResourceLocation.fromNamespaceAndPath("stormdlc", "menu/theme-1.jpg"),
+        ResourceLocation.fromNamespaceAndPath("stormdlc", "menu/theme-2.jpg"),
+        ResourceLocation.fromNamespaceAndPath("stormdlc", "menu/theme-3.jpg")
+    };
+    private static final Texture FALLBACK = new Texture(THEMES[0], 702, 468);
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "StormDLC-Wallpaper");
         thread.setDaemon(true);
@@ -52,13 +57,26 @@ public final class MenuWallpaper {
     private static volatile boolean stopped;
     private static boolean needsRefresh = true;
     private static MainMenuModule.Wallpaper selected;
-    private static Texture texture;
-    private static long textureSequence;
+    private static Texture texture, previous;
+    private static long textureSequence, transitionStart;
     private static volatile String status = "";
 
     private MenuWallpaper() {}
-
     public static String status() { return status; }
+
+    public static float blend() {
+        if (previous == null) return 1;
+        float t = Math.max(0, Math.min(1, (System.nanoTime() - transitionStart) / 360_000_000.0F));
+        return t * t * (3 - 2 * t);
+    }
+
+    public static Texture previous() {
+        if (previous != null && blend() >= 1) {
+            if (!previous.id().equals(FALLBACK.id())) Minecraft.getInstance().getTextureManager().release(previous.id());
+            previous = null;
+        }
+        return previous;
+    }
 
     public static void refresh() {
         if (stopped) return;
@@ -135,25 +153,25 @@ public final class MenuWallpaper {
                         String custom = customPath();
                         yield custom.isBlank() ? null : Path.of(custom);
                     }
-                    case BUNDLED -> null;
+                    default -> null;
                 };
                 if (path == null) {
                     if (source == MainMenuModule.Wallpaper.CUSTOM) throw new IOException("No custom image selected");
-                    image = bundled();
+                    image = bundled(source);
                 } else {
                     if (!Files.isRegularFile(path) || Files.size(path) > MAX_BYTES) throw new IOException("Wallpaper is missing or too large");
                     try (InputStream input = Files.newInputStream(path)) { image = decode(input); }
                 }
             } catch (IOException | RuntimeException failure) {
                 LOG.warn("Cannot load {} wallpaper: {}", source, failure.toString());
-                image = bundled();
-                message = "Image unavailable - using Storm wallpaper";
+                image = bundled(MainMenuModule.Wallpaper.THEME_1);
+                message = "Image unavailable - using Theme 1";
             }
             synchronized (COMPLETION_LOCK) {
                 if (stopped || requestedGeneration != generation) image.close();
                 else {
-                    Loaded previous = completed.getAndSet(new Loaded(image, requestedGeneration, message));
-                    if (previous != null) previous.image().close();
+                    Loaded pending = completed.getAndSet(new Loaded(image, requestedGeneration, message));
+                    if (pending != null) pending.image().close();
                 }
                 image = null;
             }
@@ -166,8 +184,9 @@ public final class MenuWallpaper {
         }
     }
 
-    private static NativeImage bundled() throws IOException {
-        try (InputStream input = Minecraft.getInstance().getResourceManager().open(BUNDLED)) { return decode(input); }
+    private static NativeImage bundled(MainMenuModule.Wallpaper source) throws IOException {
+        int index = source == MainMenuModule.Wallpaper.THEME_2 ? 1 : source == MainMenuModule.Wallpaper.THEME_3 ? 2 : 0;
+        try (InputStream input = Minecraft.getInstance().getResourceManager().open(THEMES[index])) { return decode(input); }
     }
 
     private static NativeImage decode(InputStream input) throws IOException {
@@ -177,14 +196,33 @@ public final class MenuWallpaper {
             var readers = ImageIO.getImageReaders(info);
             if (!readers.hasNext()) throw new IOException("Unsupported image format");
             ImageReader reader = readers.next();
+            BufferedImage decoded = null;
+            NativeImage nativeImage = null;
             try {
                 reader.setInput(info, true, true);
                 int width = reader.getWidth(0), height = reader.getHeight(0);
-                if (width <= 0 || height <= 0 || width > 8192 || height > 8192 || (long) width * height > 16777216)
+                if (width <= 0 || height <= 0 || width > 8192 || height > 8192 || (long) width * height > 33_554_432)
                     throw new IOException("Image exceeds the supported dimensions");
-            } finally { reader.dispose(); }
+                var parameters = reader.getDefaultReadParam();
+                int reduction = Math.max(1, (Math.max(width, height) + 2559) / 2560);
+                parameters.setSourceSubsampling(reduction, reduction, 0, 0);
+                decoded = reader.read(0, parameters);
+                if (decoded == null) throw new IOException("Image could not be decoded");
+                nativeImage = new NativeImage(decoded.getWidth(), decoded.getHeight(), false);
+                int[] row = new int[decoded.getWidth()];
+                for (int y = 0; y < decoded.getHeight(); y++) {
+                    decoded.getRGB(0, y, row.length, 1, row, 0, row.length);
+                    for (int x = 0; x < row.length; x++) nativeImage.setPixel(x, y, row[x]);
+                }
+                NativeImage result = nativeImage;
+                nativeImage = null;
+                return result;
+            } finally {
+                if (nativeImage != null) nativeImage.close();
+                if (decoded != null) decoded.flush();
+                reader.dispose();
+            }
         }
-        return NativeImage.read(new ByteArrayInputStream(bytes));
     }
 
     private static Path desktopPath() {
@@ -218,9 +256,10 @@ public final class MenuWallpaper {
             uploaded.setFilter(true, false);
             ResourceLocation id = ResourceLocation.fromNamespaceAndPath("stormdlc", "runtime/wallpaper_" + textureSequence++);
             client.getTextureManager().register(id, uploaded);
-            Texture previous = texture;
+            if (previous != null && !previous.id().equals(FALLBACK.id())) client.getTextureManager().release(previous.id());
+            previous = texture == null ? FALLBACK : texture;
             texture = new Texture(id, width, height);
-            if (previous != null) client.getTextureManager().release(previous.id());
+            transitionStart = System.nanoTime();
             status = result.message();
         } catch (RuntimeException failure) {
             if (uploaded != null) uploaded.close();
@@ -236,10 +275,9 @@ public final class MenuWallpaper {
             Loaded pending = completed.getAndSet(null);
             if (pending != null) pending.image().close();
         }
-        if (texture != null) {
-            Minecraft.getInstance().getTextureManager().release(texture.id());
-            texture = null;
-        }
+        if (texture != null) Minecraft.getInstance().getTextureManager().release(texture.id());
+        if (previous != null && !previous.id().equals(FALLBACK.id())) Minecraft.getInstance().getTextureManager().release(previous.id());
+        texture = previous = null;
     }
 
     public static void shutdown() {

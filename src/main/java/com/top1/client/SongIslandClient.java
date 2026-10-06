@@ -26,7 +26,7 @@ public final class SongIslandClient implements ClientModInitializer {
                 dev.stormdlc.menu.MenuWallpaper.refresh();
             });}
         });
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client->{stopping=true;dev.stormdlc.menu.MenuWallpaper.shutdown();LegacyRenderer.shutdown();tracker.shutdown();});
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client->{stopping=true;dev.stormdlc.menu.MenuWallpaper.shutdown();xyz.angames.astolfoclient.client.util.DiscordAvatarManager.shutdown();LegacyRenderer.shutdown();tracker.shutdown();});
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->{WorldLyrics.reset();if(island!=null)island.reset();dev.stormdlc.world.WorldPanels.reset();});
         WorldRenderEvents.LAST.register(context->{
             if(stopping)return;
