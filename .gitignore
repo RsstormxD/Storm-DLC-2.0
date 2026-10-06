@@ -1,0 +1,14 @@
+/.gradle/
+/build/
+/bin/
+/.idea/
+/run/
+/run-verification/
+/smoke/
+*.iml
+*.log
+*.jar
+/*.zip
+!/gradle/wrapper/gradle-wrapper.jar
+.env
+.env.*

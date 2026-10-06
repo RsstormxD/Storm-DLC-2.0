@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "stormdlc",
+  "version": "${version}",
+  "name": "Storm DLC 2.0",
+  "description": "Storm DLC 2.0 with Song Island, ported to Minecraft 1.21.4.",
+  "authors": [
+    "Storm DLC 2.0 integration",
+    "SRS (Astolfo Visuals)",
+    "mimitokox_ (Song Island)"
+  ],
+  "license": [
+    "GPL-3.0-only",
+    "AGPL-3.0-only"
+  ],
+  "icon": "assets/stormdlc/logo.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "xyz.angames.astolfoclient.client.AstolfoclientClient",
+      "com.top1.client.SongIslandClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "astolfoclient.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "stormdlc-song.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "fabric-api": ">=0.119.4",
+    "minecraft": "1.21.4",
+    "java": ">=21"
+  },
+  "suggests": {
+    "modmenu": "*"
+  },
+  "breaks": {
+    "stormvisuals": "*",
+    "astolfovisuals": "*",
+    "song-island": "*"
+  }
+}

@@ -1,0 +1,51 @@
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "program": "astolfoclient:post/depth_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                },
+                {
+                    "sampler_name": "Depth",
+                    "target": "minecraft:main",
+                    "use_depth_buffer": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": [
+                {
+                    "name": "BlurDir",
+                    "values": [ 1.0, 0.0 ]
+                }
+            ]
+        },
+        {
+            "program": "astolfoclient:post/depth_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                },
+                {
+                    "sampler_name": "Depth",
+                    "target": "minecraft:main",
+                    "use_depth_buffer": true
+                }
+            ],
+            "output": "minecraft:main",
+            "uniforms": [
+                {
+                    "name": "BlurDir",
+                    "values": [ 0.0, 1.0 ]
+                }
+            ]
+        }
+    ]
+}

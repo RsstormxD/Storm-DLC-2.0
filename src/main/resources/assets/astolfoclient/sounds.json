@@ -1,0 +1,106 @@
+{
+  "module_enable": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:enable"
+    ]
+  },
+  "module_disable": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:disable"
+    ]
+  },
+  "crash_detection": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:crash_detection",
+      "astolfoclient:crash-detection"
+    ]
+  },
+  "crash-detection": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:crash_detection",
+      "astolfoclient:crash-detection"
+    ]
+  },
+  "clickgui_open": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/gui-open"
+    ]
+  },
+  "clickgui_category": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/changing-categorys"
+    ]
+  },
+  "clickgui_module": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/reselecting-modules"
+    ]
+  },
+  "clickgui_slider": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/slider-moving"
+    ]
+  },
+  "clickgui_search": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/search-bar-click"
+    ]
+  },
+  "clickgui_mode_open": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:clickgui-sfx/mode-section-open"
+    ]
+  },
+  "hit_bell": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_bell"
+    ]
+  },
+  "hit_beng": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_beng"
+    ]
+  },
+  "hit_bonk": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_bonk"
+    ]
+  },
+  "hit_bubble": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_bubble"
+    ]
+  },
+  "hit_glass": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_glass"
+    ]
+  },
+  "hit_metallic": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_metallic"
+    ]
+  },
+  "hit_rust": {
+    "category": "master",
+    "sounds": [
+      "astolfoclient:hit_rust"
+    ]
+  }
+}

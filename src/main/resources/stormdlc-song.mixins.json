@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.top1.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "stormdlc-refmap.json",
+  "client": [
+    "GameRendererMixin",
+    "BossHealthOverlayMixin",
+    "MouseHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

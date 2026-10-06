@@ -1,0 +1,65 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base { archivesName = project.archives_base_name }
+
+repositories { mavenCentral() }
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.119.4+1.21.4"
+    include(implementation("net.java.dev.jna:jna:5.15.0"))
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+}
+
+test { useJUnitPlatform() }
+
+processResources {
+    inputs.property "stormDlcSmoke", project.hasProperty('stormDlcSmoke')
+    inputs.property "version", project.version
+    inputs.property "updates_repository", project.findProperty('updates_repository') ?: ''
+    filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }
+    filesMatching("stormdlc-update.json") { expand "updates_repository": inputs.properties.updates_repository }
+}
+
+tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+
+tasks.withType(JavaCompile).configureEach { options.encoding = "UTF-8"; options.compilerArgs += ["-Xmaxerrs", "400"] }
+
+loom { mixin { useLegacyMixinAp = true; defaultRefmapName = "stormdlc-refmap.json" } }
+
+jar { from("LICENSE-Song-Island"); from("THIRD_PARTY_NOTICES.md") }
+
+// Optional local smoke harness; absent from regular builds and release JARs.
+if (project.hasProperty('stormDlcSmoke')) {
+    sourceSets.main.java.srcDir('src/smoke/java')
+    loom.runs.client.runDir('run-verification')
+    processResources.doLast {
+        def metadata = file("${destinationDir}/fabric.mod.json")
+        def data = new groovy.json.JsonSlurper().parse(metadata)
+        data.entrypoints.client.add('dev.stormdlc.SmokeTest')
+        metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(data))
+    }
+}
+
+// The Windows JNI library runs only in this small, isolated helper JVM.
+def mediaWorkerJar = tasks.register('mediaWorkerJar', Jar) {
+    dependsOn tasks.named('compileJava')
+    archiveFileName = 'media-worker.jar'
+    destinationDirectory = layout.buildDirectory.dir('media-worker')
+    from(tasks.named('compileJava').flatMap { it.destinationDirectory }) { include 'dev/redstones/mediaplayerinfo/**' }
+    from('src/main/resources') { include 'mediaplayerinfo/natives/win/MediaPlayerInfo.dll' }
+    manifest { attributes 'Main-Class': 'dev.redstones.mediaplayerinfo.worker.MediaWorker' }
+}
+processResources { dependsOn mediaWorkerJar; from(mediaWorkerJar) { into 'stormdlc' } }
